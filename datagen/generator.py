@@ -1,3 +1,15 @@
+"""
+This program generates data of the form: <name, latitude, longitude, date, time, condition>
+where name = name of the person, latitude & longitude are the geographical coordinates, date
+& time are the time stamp when those coordinates were recorded and finally condition indicates
+whether this person is sick or healthy.
+
+Dependencies:
+ - Python 2.7 only (one library doesn't support Python 3 :(.)
+ - latlon library - pip install latlon
+ - pandas
+"""
+
 import random
 import decimal
 import string
