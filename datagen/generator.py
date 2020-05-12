@@ -8,7 +8,9 @@ from LatLon import *
 
 #configurations used to generate the data
 total_readings = 24
-total_pop = 1
+total_pop = 100
+sick_percent = 5 #% of total pop that is sick
+no_of_sick_allowed = ((total_pop*sick_percent)/100)
 name_size = 7
 timehr_range_start = 17
 timehr_range_end = 21
@@ -25,13 +27,26 @@ lonend = 73910999
 col_names = ['name','lat','lon','date','time','condition']
 datasetdf = pd.DataFrame(columns = col_names)
 
+if(no_of_sick_allowed<1):
+	no_of_sick_allowed = 1
+
+print("Starting generation of data ...")
+print("Max sick allowed: " + str(no_of_sick_allowed) + " out of total population: " + str(total_pop))
+curr_sick = 0
+mark_sick = 0
+
 for p in range(0, total_pop):
 	name = ''.join(random.choice(string.ascii_uppercase) for _ in range(name_size))
 	#print(name)
 	condition = "healthy"
-	con = random.randint(10,20)
-	if(con>=15):
-		condition = "sick"
+	if(mark_sick==0):
+		con = random.randint(10,20)
+		if(con>=15):
+			condition = "sick"
+			curr_sick = curr_sick + 1
+			if(curr_sick>=no_of_sick_allowed):
+				mark_sick = 1
+
 	#print("Person: " + name + " is: " + condition)
 	
 	for p2 in range(0, total_readings):
@@ -51,4 +66,9 @@ for p in range(0, total_pop):
 
 		datasetdf = datasetdf.append({'name': name, 'lat':lat, 'lon':lon, 'date': date, 'time': time, 'condition': condition}, ignore_index=True)
 
-print(datasetdf)
+	print("Generated data points for: " + str(p) + " people.")
+
+print("Completed generation...now writing to CSV file...")
+datasetdf.to_csv("cov19_gen_dataset.csv")
+print("Wrote file.")
+#print(datasetdf)
