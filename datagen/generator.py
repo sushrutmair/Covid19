@@ -4,6 +4,13 @@ where name = name of the person, latitude & longitude are the geographical coord
 & time are the time stamp when those coordinates were recorded and finally condition indicates
 whether this person is sick or healthy.
 
+The default logic values set 5% of the population as sick with Covid19. 50% of the population
+is set to 'linger' which means that they roam in a regimented geographical area around their
+start coordinates. This is to account for activities like visiting a food truck, market area or
+a sports arena. The other 50% are set to be 'passthru' which means that they roam randomly in
+the overall geographical area. This is to account for people who are just passing through or
+do not spend too much time in a single small geo area.
+
 Dependencies:
  - Python 2.7 only (one library doesn't support Python 3 :(.)
  - latlon library - pip install latlon
@@ -20,7 +27,7 @@ from LatLon import *
 
 #configurations used to generate the data
 total_readings = 24
-total_pop = 100
+total_pop = 10
 sick_percent = 5 #% of total pop that is sick
 no_of_sick_allowed = ((total_pop*sick_percent)/100)
 name_size = 7
@@ -46,7 +53,26 @@ print("Starting generation of data ...")
 print("Max sick allowed: " + str(no_of_sick_allowed) + " out of total population: " + str(total_pop))
 curr_sick = 0
 mark_sick = 0
+glinger = False
 
+def generate_dyndata(linger):
+
+	if(linger):#regimented locations against contracted timeframes
+		print("linger")
+		regimented_datagen()
+	else:#random locations against random timeframes
+		print("passthru")
+		random_datagen()
+
+def regimented_datagen():
+
+	return
+
+def random_datagen():
+
+	return
+
+#main
 for p in range(0, total_pop):
 	name = ''.join(random.choice(string.ascii_uppercase) for _ in range(name_size))
 	#print(name)
@@ -60,6 +86,12 @@ for p in range(0, total_pop):
 				mark_sick = 1
 
 	#print("Person: " + name + " is: " + condition)
+	if(glinger):
+		glinger = False
+	else:
+		glinger = True
+
+	generate_dyndata(glinger)
 	
 	for p2 in range(0, total_readings):
 		x = datetime.datetime.now()
