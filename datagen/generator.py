@@ -33,7 +33,7 @@ from LatLon import *
 total_readings = 24
 
 #total no of people for whom readings are to be generated
-total_pop = 10
+total_pop = 5
 
 #% of total pop that is sick
 sick_percent = 5
