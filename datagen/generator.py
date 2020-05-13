@@ -9,7 +9,7 @@ is set to 'linger' which means that they roam in a regimented geographical area 
 start coordinates. This is to account for activities like visiting a food truck, market area or
 a sports arena. The other 50% are set to be 'passthru' which means that they roam randomly in
 the overall geographical area. This is to account for people who are just passing through or
-do not spend too much time in a single small geo area.
+do not spend too much time in a single small geo location.
 
 Dependencies:
  - Python 2.7 only (one library doesn't support Python 3 :(.)
@@ -27,7 +27,7 @@ from LatLon import *
 
 #configurations used to generate the data
 total_readings = 24
-total_pop = 10
+total_pop = 2
 sick_percent = 5 #% of total pop that is sick
 no_of_sick_allowed = ((total_pop*sick_percent)/100)
 name_size = 7
@@ -55,22 +55,42 @@ curr_sick = 0
 mark_sick = 0
 glinger = False
 
-def generate_dyndata(linger):
+def generate_dyndata(linger, name, condition):
 
 	if(linger):#regimented locations against contracted timeframes
 		print("linger")
-		regimented_datagen()
+		return regimented_datagen()
 	else:#random locations against random timeframes
 		print("passthru")
-		random_datagen()
+		return random_datagen(name, condition)
 
 def regimented_datagen():
 
 	return
 
-def random_datagen():
+def random_datagen(name, condition):
 
-	return
+	dfrandom = pd.DataFrame(columns = col_names)
+
+	for p2 in range(0, total_readings):
+		x = datetime.datetime.now()
+		date = x.strftime("%d-%m-%Y")
+		#print(date)
+	
+		timehr = random.randint(timehr_range_start, timehr_range_end)
+		timemm = random.randint(timemm_range_start, timemm_range_end)
+		time = str(timehr) + str(timemm)
+		#print(time)
+
+		lat=decimal.Decimal(random.randrange(latstart,latend))/1000000
+		lon=decimal.Decimal(random.randrange(lonstart,lonend))/1000000
+		currloc = LatLon(Latitude(lat),Longitude(lon))
+		#print(currloc) #the current location of this person
+
+		dfrandom = dfrandom.append({'name': name, 'lat':lat, 'lon':lon, 'date': date, 'time': time, 'condition': condition}, ignore_index=True)
+
+	#print(dfrandom)
+	return dfrandom
 
 #main
 for p in range(0, total_pop):
@@ -91,8 +111,9 @@ for p in range(0, total_pop):
 	else:
 		glinger = True
 
-	generate_dyndata(glinger)
+	datasetdf = datasetdf.append(generate_dyndata(glinger,name,condition))
 	
+	'''
 	for p2 in range(0, total_readings):
 		x = datetime.datetime.now()
 		date = x.strftime("%d-%m-%Y")
@@ -109,6 +130,7 @@ for p in range(0, total_pop):
 		#print(currloc) #the current location of this person
 
 		datasetdf = datasetdf.append({'name': name, 'lat':lat, 'lon':lon, 'date': date, 'time': time, 'condition': condition}, ignore_index=True)
+	'''
 
 	print("Generated data points for: " + str(p) + " people.")
 
