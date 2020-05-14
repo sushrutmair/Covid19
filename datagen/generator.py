@@ -154,7 +154,7 @@ def regimented_datagen(name, condition,locindx):
 		#if(mnte>59):
 		#	mnte = 59
 		y = datetime.datetime(year = int(yr), month=int(mon), day=int(day), hour=int(timehr1), minute=int(timemm1))
-		z = y + datetime.timedelta(0,59)
+		z = y + datetime.timedelta(0,60)
 
 		#generate a next loc for this timestamp z starting from basestartloc
 		nextloc = loc.offset(locindx*linger_mov_angle_mulfactor,0.002)
@@ -170,6 +170,7 @@ def regimented_datagen(name, condition,locindx):
 		#append the dataframe for this person for each iteration so that we store a linger path over a period of time
 		#first ensure that the right time hr and min variables are used as well as lat, lon
 		time1 = str(timehr1) + str(timemm1)
+		print("****** "+ time1)
 		dfregi = dfregi.append({'name': name, 'lat':lat1, 'lon':lon1, 'date': date, 'time': time1, 'condition': condition}, ignore_index=True)
 
 	return dfregi
