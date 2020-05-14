@@ -16,6 +16,7 @@ a) use the data to do contact tracing and tag risk to a person depending on his 
 over time.
 b) generate data models under various circumstances (explained in various config parameter 
 descriptions below) to see how infection risk changes.
+c) find hotspots, locations where a large number of sick and healthy people intermingle.
 
 Dependencies:
  - Python 2.7 only (latlon doesn't support Python 3 :(.)
@@ -41,7 +42,7 @@ total_readings = 24
 
 #total no of people for whom readings are to be generated. These is the sum total of all
 #people who were recorded as being under the geo location of interest.
-total_pop = 5
+total_pop = 1000
 
 #% of total pop that is sick. Vary this to test how infection risk changes with more/less
 #people seen co located in a geo area.
@@ -59,7 +60,7 @@ name_size = 7
 timehr_range_start = 17
 timehr_range_end = 21
 timemm_range_start = 10
-timemm_range_end = 60
+timemm_range_end = 59
 
 #the four below restrict the generation of arbitrary location coordinates to a certain 
 #geographical area. It is a roughly rectangular block carved from a locality. You can put
@@ -149,10 +150,10 @@ def regimented_datagen(name, condition,locindx):
 	for p2 in range(0, total_readings-1):
 		#generate and apply a path iteratively against time. thus we get lat,lon and time here. the rest have
 		#been filled from either func parameters or generated just before this.
-		mnte = int(timemm1)
-		if(mnte>59):
-			mnte = 59
-		y = datetime.datetime(year = int(yr), month=int(mon), day=int(day), hour=int(timehr1), minute=mnte)
+		#mnte = int(timemm1)
+		#if(mnte>59):
+		#	mnte = 59
+		y = datetime.datetime(year = int(yr), month=int(mon), day=int(day), hour=int(timehr1), minute=int(timemm1))
 		z = y + datetime.timedelta(0,59)
 
 		#generate a next loc for this timestamp z starting from basestartloc
