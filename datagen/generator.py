@@ -150,9 +150,6 @@ def regimented_datagen(name, condition,locindx):
 	for p2 in range(0, total_readings-1):
 		#generate and apply a path iteratively against time. thus we get lat,lon and time here. the rest have
 		#been filled from either func parameters or generated just before this.
-		#mnte = int(timemm1)
-		#if(mnte>59):
-		#	mnte = 59
 		y = datetime.datetime(year = int(yr), month=int(mon), day=int(day), hour=int(timehr1), minute=int(timemm1))
 		z = y + datetime.timedelta(0,60)
 
@@ -170,7 +167,6 @@ def regimented_datagen(name, condition,locindx):
 		#append the dataframe for this person for each iteration so that we store a linger path over a period of time
 		#first ensure that the right time hr and min variables are used as well as lat, lon
 		time1 = str(timehr1) + str(timemm1)
-		print("****** "+ time1)
 		dfregi = dfregi.append({'name': name, 'lat':lat1, 'lon':lon1, 'date': date, 'time': time1, 'condition': condition}, ignore_index=True)
 
 	return dfregi
