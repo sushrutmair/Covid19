@@ -42,7 +42,7 @@ total_readings = 24
 
 #total no of people for whom readings are to be generated. These is the sum total of all
 #people who were recorded as being under the geo location of interest.
-total_pop = 2
+total_pop = 5
 
 #% of total pop that is sick. Vary this to test how infection risk changes with more/less
 #people seen co located in a geo area.
@@ -74,8 +74,9 @@ lonend = 73910999
 #num of start locations for regimented movements of people. People who have
 #regimented movements (linger), move around these areas only and do not have
 #a widespread area of movement. This mimics food truck vendors, market vendors
-#and generally people who stay put in a location.
-total_linger_start_loc = 5
+#and generally people who stay put in a location. Make this equal to number of
+#such 'static' sites in the overall geo area of interest. Cannot be > 24.
+total_linger_start_loc = 7
 
 #this decides the heading (bearing) a person will move to. Note that the
 #actual bearing is a product of this param + total_linger_start_loc's
@@ -175,7 +176,7 @@ def regimented_datagen(name, condition,locindx):
 #linger paths for some part of the population.
 def gen_reg_start_loc(total_start_pos):
 
-	if(total_start_pos>24):
+	if(total_start_pos>24): #sanity!
 		total_start_pos = 24
 
 	reglocdf1 = pd.DataFrame(columns = col_regloc)
