@@ -21,11 +21,18 @@ import networkx as nx
 #data file path. this is the data to be analyzed.
 datapath = '/mnt/c/Sushrut/Other projects/covid19/cont_trac_graph/githubrepo/Covid19/datagen/cov19_gen_dataset.csv'
 
+#stores the size of the virtual microcell around each location a person was recorded to have visited.
+#this is used to calculate if two persons have breached the commonly accepted social distance limits.
+#can be changed to anything, default is kept at x metres.
+microcell_radius = 0.002 #in metres
+
 ##### All configurations end here   #####
 
 ##### Runtime variables #####
 rawdataframe = pd.DataFrame()
+sorteddf = pd.DataFrame() #same as raw data frame except all locations are sorted asc order by time of visit
 persons = []
+all_locs_unnormalized = [] #holds all recorded locations in an array
 
 ##### Methods #####
 
@@ -43,9 +50,9 @@ def dataprep():
     print(rawdataframe.head(3))
     print(rawdataframe.tail(3))
 
-    sorteddf = pd.DataFrame()
     popcount = 0
     lastname = ""
+    dftmp = pd.DataFrame()
 
     #our goal is to get each unique name and then prepare data for that.
     for index, row in rawdataframe.iterrows():
@@ -62,31 +69,45 @@ def dataprep():
             df = df.sort_values(by=['time'])
             
             #finally append this to the sorted df
-            sorteddf = sorteddf.append(df)
+            dftmp = dftmp.append(df)
             lastname = currname
 
     printcov("Completed prep for data.")
-    printcov("Sorted data: ")
-    print(sorteddf.head(27))
-    print(sorteddf.tail(27))
+    #sorteddf = sorteddf.append(dftmp)
+    printcov("Prepp'd data: ")
+    print(dftmp.head(27))
+    print(dftmp.tail(27))
     printcov("Unique people found in pop of size: " + str(popcount))
     print(persons)
-    printcov("Saving sorted data to a file: sorted_df.csv for debugging (in current folder).")
-    sorteddf.to_csv("sorted_df.csv")
+    printcov("Saving prepp'd data to a file: preppd_df.csv for debugging (in current folder).")
+    dftmp.to_csv("preppd_df.csv")
 
-    return
+    return dftmp
 
 #prepares graph data per unique person in the provided dataset and plots their travel
 #history with locations and time. Also generates and adds useful attributes to nodes 
 #and edges that help in further analysis. At this point, we know the total population
-#size, the names of each unique person. We use this to plot a graph for analysis.
-def graph_per_person():
+#size, the names of each unique person. We use this to plot a graph for analysis. Before
+#we create a new loc node, we must verify that it is a new microcell and not in another
+#microcell.
+def graph_per_person(person):
+    printcov("Generating graph for: " + person)
+
+    one_persons_records = sorteddf.loc[sorteddf['name'] == person] #sorted by time in asc order
+    print(one_persons_records)
+
     return
 
 ##### main #####
 printcov("Starting Covid 19 contact tracing analysis for data in: ")
 printcov(" " + datapath)
 
-dataprep()
+#call dataprep method
+sorteddf = dataprep()
+
+#call graph generation method for each person in the dataset
+print("Initiating graph generation...")
+for person in range(0,len(persons)):
+    graph_per_person(persons[person])
 
 printcov("Completed Covid 19 contact tracing analysis.")
