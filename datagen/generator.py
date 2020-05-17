@@ -32,7 +32,7 @@ import pandas as pd
 import LatLon
 from LatLon import *
 
-##### all configurables end here #####
+##### all configurables start here #####
 
 #configurations used to generate the data
 
