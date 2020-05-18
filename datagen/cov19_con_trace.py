@@ -15,11 +15,15 @@ import pandas as pd
 import LatLon
 from LatLon import *
 import networkx as nx
+import matplotlib.pyplot as plt
 
 ##### All configurations start here #####
 
+#set for lat, lon otherwise implicit default loses precision
+pd.set_option('display.precision',12)
+
 #data file path. this is the data to be analyzed.
-datapath = '/mnt/c/Sushrut/Other projects/covid19/cont_trac_graph/githubrepo/Covid19/datagen/cov19_gen_dataset.csv'
+datapath = 'cov19_gen_dataset.csv'
 
 #stores the size of the virtual microcell around each location a person was recorded to have visited.
 #this is used to calculate if two persons have breached the commonly accepted social distance limits.
@@ -33,6 +37,7 @@ rawdataframe = pd.DataFrame()
 sorteddf = pd.DataFrame() #same as raw data frame except all locations are sorted asc order by time of visit
 persons = []
 all_locs_unnormalized = [] #holds all recorded locations in an array
+gx_pop_travel_hist = [] #array of nx graphs holding travel history of each member in pop
 
 ##### Methods #####
 
@@ -87,16 +92,32 @@ def dataprep():
 #prepares graph data per unique person in the provided dataset and plots their travel
 #history with locations and time. Also generates and adds useful attributes to nodes 
 #and edges that help in further analysis. At this point, we know the total population
-#size, the names of each unique person. We use this to plot a graph for analysis. Before
-#we create a new loc node, we must verify that it is a new microcell and not in another
-#microcell.
+#size, the names of each unique person. We use this to plot a graph for analysis.
 def graph_per_person(person):
     printcov("Generating graph for: " + person)
-
     one_persons_records = sorteddf.loc[sorteddf['name'] == person] #sorted by time in asc order
     print(one_persons_records)
+    gx = nx.MultiDiGraph(person=person) #new graph for curr person
+
+    #create all nodes
+    nodeid=0
+    for index, row in one_persons_records.iterrows():
+        #each recorded loc is a node
+        gx.add_node(nodeid,latlon=LatLon(Latitude(row['lat']),Longitude(row['lon'])))
+        nodeid = nodeid+1
+    
+    disp_graph(gx)    
+    gx_pop_travel_hist.append(gx)
+
+    #disp_graph(gx_pop_travel_hist)
 
     return
+
+#display graphs
+def disp_graph(g):
+    nx.draw(g, with_labels=True)
+    nx.draw_networkx_edge_labels(g, pos=nx.spring_layout(g))
+    plt.show()
 
 ##### main #####
 printcov("Starting Covid 19 contact tracing analysis for data in: ")
