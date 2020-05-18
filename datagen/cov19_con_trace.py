@@ -106,9 +106,10 @@ def graph_per_person(person):
         gx.add_node(nodeid,latlon=LatLon(Latitude(row['lat']),Longitude(row['lon'])))
         nodeid = nodeid+1
     
-    disp_graph(gx)    
+    #gx.add_edge(currnode,nextnode,time=one_persons_records.at[nid+1,'time'])
+    disp_graph(gx)
     gx_pop_travel_hist.append(gx)
-
+    
     #disp_graph(gx_pop_travel_hist)
 
     return
