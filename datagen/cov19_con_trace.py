@@ -30,6 +30,10 @@ datapath = 'cov19_gen_dataset.csv'
 #can be changed to anything, default is kept at x metres.
 microcell_radius = 0.002 #in metres
 
+#controls whether graphs are visually displayed or not. If running on linux ensure X Windows is available.
+#0 = graphs are displayed in ui. 1 = no graphs are displayed.
+ui = 1
+
 ##### All configurations end here   #####
 
 ##### Runtime variables #####
@@ -99,7 +103,7 @@ def graph_per_person(person):
     one_persons_records = sorteddf.loc[sorteddf['name'] == person] #sorted by time in asc order
     one_persons_records = one_persons_records.reset_index(drop=True)
     print(one_persons_records)
-    gx = nx.MultiDiGraph(person=person) #new graph for curr person
+    gx = nx.MultiDiGraph(name=person) #new graph for curr person
 
     #create all nodes
     nodeid=0
@@ -126,15 +130,31 @@ def graph_per_person(person):
 
     return
 
-#validates all graphs. For each graph, walks it, explodes nodes and edges.
+#allows to validate all graphs. For each graph, walks it, explodes nodes and edges.
 def test_all_graphs(g):
+    print("=========> Testing all graphs: ")
+    for i in range(0, len(g)):
+        print(nx.info(g[i]))
+
+        print(" - Nodes:")
+        print(g[i].nodes)
+        for x1 in range(0, len(g[i].nodes)):
+            print("Node id: " + str(x1) + str(g[i].nodes[x1]))
+        
+        print(" - Edges:")
+        print(g[i].edges)
+        print("Edge attributes: " + str(nx.get_edge_attributes(g[i],'time')))
+        
+        print('------------------------------------------')
+    print("=========> Testing complete.")
     return
 
 #display graphs
 def disp_graph(g):
-    nx.draw(g, with_labels=True)
-    nx.draw_networkx_edge_labels(g, pos=nx.spring_layout(g))
-    plt.show()
+    if(ui == 0):
+        nx.draw(g, with_labels=True)
+        nx.draw_networkx_edge_labels(g, pos=nx.spring_layout(g))
+        plt.show()
 
 ##### main #####
 printcov("Starting Covid 19 contact tracing analysis for data in: ")
