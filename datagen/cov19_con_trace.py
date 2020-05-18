@@ -37,7 +37,7 @@ rawdataframe = pd.DataFrame()
 sorteddf = pd.DataFrame() #same as raw data frame except all locations are sorted asc order by time of visit
 persons = []
 all_locs_unnormalized = [] #holds all recorded locations in an array
-gx_pop_travel_hist = [] #array of nx graphs holding travel history of each member in pop
+gxarry_pop_travel_hist = [] #array of nx graphs holding travel history of each member in pop
 
 ##### Methods #####
 
@@ -79,6 +79,7 @@ def dataprep():
 
     printcov("Completed prep for data.")
     #sorteddf = sorteddf.append(dftmp)
+    dftmp = dftmp.reset_index(drop=True)
     printcov("Prepp'd data: ")
     print(dftmp.head(27))
     print(dftmp.tail(27))
@@ -96,6 +97,7 @@ def dataprep():
 def graph_per_person(person):
     printcov("Generating graph for: " + person)
     one_persons_records = sorteddf.loc[sorteddf['name'] == person] #sorted by time in asc order
+    one_persons_records = one_persons_records.reset_index(drop=True)
     print(one_persons_records)
     gx = nx.MultiDiGraph(person=person) #new graph for curr person
 
@@ -106,12 +108,26 @@ def graph_per_person(person):
         gx.add_node(nodeid,latlon=LatLon(Latitude(row['lat']),Longitude(row['lon'])))
         nodeid = nodeid+1
     
-    #gx.add_edge(currnode,nextnode,time=one_persons_records.at[nid+1,'time'])
-    disp_graph(gx)
-    gx_pop_travel_hist.append(gx)
-    
-    #disp_graph(gx_pop_travel_hist)
+    #now let's add edges for the nodes
+    print("Adding edges for: " + str(nx.number_of_nodes(gx)) + " nodes...")
+    print(gx.nodes())
+    for x in range(0,nx.number_of_nodes(gx)):
+        y = x + 1
+        if(y == nx.number_of_nodes(gx)):
+            print("reached end node")
+            break
+        else:
+            gx.add_edge(x,y,time=one_persons_records.at[y,'time'])
 
+    print("Completed adding edges for: " + str(person) + ". Graph complete.")
+
+    disp_graph(gx)
+    gxarry_pop_travel_hist.append(gx)
+
+    return
+
+#validates all graphs. For each graph, walks it, explodes nodes and edges.
+def test_all_graphs(g):
     return
 
 #display graphs
@@ -131,5 +147,7 @@ sorteddf = dataprep()
 print("Initiating graph generation...")
 for person in range(0,len(persons)):
     graph_per_person(persons[person])
+
+test_all_graphs(gxarry_pop_travel_hist)
 
 printcov("Completed Covid 19 contact tracing analysis.")
