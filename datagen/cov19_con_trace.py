@@ -16,6 +16,7 @@ import LatLon
 from LatLon import *
 import networkx as nx
 import matplotlib.pyplot as plt
+import time
 
 ##### All configurations start here #####
 
@@ -23,7 +24,7 @@ import matplotlib.pyplot as plt
 pd.set_option('display.precision',12)
 
 #data file path. this is the data to be analyzed.
-datapath = 'cov19_gen_dataset.csv'
+datapath = 'cov19_gen_dataset.csv'#'cov19_gen_dataset_10k.csv'
 
 #stores the size of the virtual microcell around each location a person was recorded to have visited.
 #this is used to calculate if two persons have breached the commonly accepted social distance limits.
@@ -42,6 +43,7 @@ sorteddf = pd.DataFrame() #same as raw data frame except all locations are sorte
 persons = []
 all_locs_unnormalized = [] #holds all recorded locations in an array
 gxarry_pop_travel_hist = [] #array of nx graphs holding travel history of each member in pop
+undir_gxarray_pop_travel_hist = []#same graph as gxarry_pop_travel_hist except it is undirected
 
 ##### Methods #####
 
@@ -130,9 +132,51 @@ def graph_per_person(person):
 
     return
 
+#finds overlapping locations with time for the population and also marks such
+#locations with a new attribute so that we can easily analyze them later. We also
+#create a new undirected graph that has all overlaps available. There shall be one
+#such overlap graph per person in the population.
+def overlaps_for_pop(gxall):
+    printcov("Finding overlaps within population's location history")
+    for x in range(0, len(gxall)):
+        #get the 1st person and find overlaps of each of their loc
+        #with each loc of each other person in the population.
+        
+        #we convert the graph to an undirected copy since mixed graphs are
+        #not possible in nx. We'll use both versions for later analysis. Note
+        #that the loc overlap calc doesnt need undirected graph. We shall create
+        #a new undirected edge for each overlap and that is why we need to
+        #convert to undirected graph
+        undirectedgxcurr = gxall[x].to_undirected() #get this person's graph
+        disp_graph(undirectedgxcurr)
+
+        """ if(x == len(gxall)-1):
+            #we've reached the last person (graph) in the array.
+        else: """
+        #compare current person graph with all others for loc overlaps
+        gxallminuscurr = gxall
+        gxallminuscurr.pop(x)#remove current persons graph before cmp
+        for y in range(0, len(gxallminuscurr)):
+            undirectedgxnext = gxallminuscurr[y].to_undirected()
+            find_overlap(undirectedgxcurr,undirectedgxnext)
+            
+    printcov("Completed overlap extractions.")
+    return
+
+#finds overlapping locations between two graphs
+def find_overlap(undgx_curr, undgx_next):
+    #get 'latlon' attributes of all nodes
+    gxcurr_nodeattrib = nx.get_node_attributes(undgx_curr,'latlon')
+    gxnext_nodeattrib = nx.get_node_attributes(undgx_next,'latlon')
+    printcov("Node attributes for overlap calc are:")
+    print("curr anchor node: " + gxcurr_nodeattrib)
+    print("comparison  node: " + gxnext_nodeattrib)
+
+    return
+
 #allows to validate all graphs. For each graph, walks it, explodes nodes and edges.
 def test_all_graphs(g):
-    print("=========> Testing all graphs: ")
+    printcov("=========> Testing all graphs: ")
     for i in range(0, len(g)):
         print(nx.info(g[i]))
 
@@ -146,7 +190,7 @@ def test_all_graphs(g):
         print("Edge attributes: " + str(nx.get_edge_attributes(g[i],'time')))
         
         print('------------------------------------------')
-    print("=========> Testing complete.")
+    printcov("=========> Testing complete.")
     return
 
 #display graphs
@@ -159,6 +203,11 @@ def disp_graph(g):
 ##### main #####
 printcov("Starting Covid 19 contact tracing analysis for data in: ")
 printcov(" " + datapath)
+printcov("Configurations are: ")
+print("Microcell radius for overlap calc: " + microcell_radius)
+print("Graph display control is: " + ui + " 0 = ON / 1 = OFF.")
+print('-------------------------------------')
+time.sleep(5)
 
 #call dataprep method
 sorteddf = dataprep()
@@ -168,6 +217,9 @@ print("Initiating graph generation...")
 for person in range(0,len(persons)):
     graph_per_person(persons[person])
 
+#gxarry_pop_travel_hist was filled in graph_per_person
 test_all_graphs(gxarry_pop_travel_hist)
+
+overlaps_for_pop(gxarry_pop_travel_hist)
 
 printcov("Completed Covid 19 contact tracing analysis.")

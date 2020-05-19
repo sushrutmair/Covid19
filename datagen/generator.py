@@ -31,6 +31,7 @@ import datetime
 import pandas as pd
 import LatLon
 from LatLon import *
+import time
 
 ##### all configurables start here #####
 
@@ -215,8 +216,27 @@ def random_datagen(name, condition):
 
 ##### main #####
 
+print("Configurations are: ")
+print("------------------------------------")
+print("Total population: " + str(total_pop))
+print("Max sick allowed: " + str(no_of_sick_allowed))
+print("Total location readings per person: " + str(total_readings))
+print("Geo location bounding box coordinates are: ")
+print(str(latstart))
+print(str(latend))
+print(str(lonstart))
+print(str(lonend))
+print("Time range of location readings are: ")
+print(str(timehr_range_start))
+print(str(timehr_range_end))
+print(str(timemm_range_start))
+print(str(timemm_range_end))
+print("Number of start locations to be generated for regimented loc paths: " + str(total_linger_start_loc))
+print("Regimented loc path move bearing factor: " + str(linger_mov_angle_mulfactor))
+print('-------------------------------------')
+time.sleep(7)
+
 print("Starting generation of data ...")
-print("Max sick allowed: " + str(no_of_sick_allowed) + " out of total population: " + str(total_pop))
 reglocdf = gen_reg_start_loc(total_linger_start_loc)
 print("Regimented start locations are: ")
 print(reglocdf)
