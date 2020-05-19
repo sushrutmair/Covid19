@@ -25,12 +25,12 @@ from copy import deepcopy
 pd.set_option('display.precision',12)
 
 #data file path. this is the data to be analyzed.
-datapath = 'cov19_gen_dataset.csv'#'cov19_gen_dataset_10k.csv'
+datapath = 'cov19_gen_dataset_10.csv'#'cov19_gen_dataset_10k.csv'
 
 #stores the size of the virtual microcell around each location a person was recorded to have visited.
 #this is used to calculate if two persons have breached the commonly accepted social distance limits.
 #can be changed to anything, default is kept at x metres.
-microcell_radius = 0.002 #in metres
+microcell_radius = 0.003 # default is 0.003. It is about 10 ft in metres
 
 #controls whether graphs are visually displayed or not. If running on linux ensure X Windows is available.
 #0 = graphs are displayed in ui. 1 = no graphs are displayed.
@@ -45,6 +45,8 @@ persons = []
 all_locs_unnormalized = [] #holds all recorded locations in an array
 gxarry_pop_travel_hist = [] #array of nx graphs holding travel history of each member in pop
 undir_gxarray_pop_travel_hist = []#same graph as gxarry_pop_travel_hist except it is undirected
+col_breach = ['name1','latlon1','name2','latlon2','dist']
+breaches = pd.DataFrame(columns = col_breach)
 
 ##### Methods #####
 
@@ -139,6 +141,7 @@ def graph_per_person(person):
 #such overlap graph per person in the population.
 def overlaps_for_pop(gxall):
     printcov("Finding overlaps within population's location history")
+    b_all = pd.DataFrame(columns = col_breach)
     for x in range(0, len(gxall)):
         #get the 1st person and find overlaps of each of their loc
         #with each loc of each other person in the population.
@@ -149,39 +152,60 @@ def overlaps_for_pop(gxall):
         #a new undirected edge for each overlap and that is why we need to
         #convert to undirected graph
         undirectedgxcurr = gxall[x].to_undirected() #get this person's graph
-        disp_graph(undirectedgxcurr)
-
-        """ if(x == len(gxall)-1):
-            #we've reached the last person (graph) in the array.
-        else: """
+        
         #compare current person graph with all others for loc overlaps
         #first copy out the graph container
         gxallminuscurr = []
         for cv in range(0,len(gxall)):
-            newgx = deepcopy(gxall[cv])
+            newgx = deepcopy(gxall[cv]) #use a deep copy
             gxallminuscurr.append(newgx)
 
         #gxallminuscurr = copy.deep_copy(gxall)
         gxallminuscurr.pop(x)#remove current persons graph before cmp
         for y in range(0, len(gxallminuscurr)):
             undirectedgxnext = gxallminuscurr[y].to_undirected()
-            find_overlap(undirectedgxcurr,undirectedgxnext)
+            disp_graph(undirectedgxnext)
+            bxy = find_overlap(undirectedgxcurr,undirectedgxnext)
+            b_all = b_all.append(bxy)
             
     printcov("Completed overlap extractions.")
-    return
+    return b_all
 
 #finds overlapping locations between two graphs
 def find_overlap(undgx_curr, undgx_next):
-    #get 'latlon' attributes of all nodes
-    printcov("Processing overlaps. Anchor graph: " + str(undgx_curr.graph['name']) + " and Comparison graph: " + str(undgx_next.graph['name']))
+    #get 'latlon' attributes of both and figure out if present in microcell
+    anchorgraph_name = str(undgx_curr.graph['name'])
+    compargraph_name = str(undgx_next.graph['name'])
+    printcov("Processing overlaps. Anchor graph: " + anchorgraph_name + " and Comparison graph: " + compargraph_name)
     gxcurr_nodeattrib = nx.get_node_attributes(undgx_curr,'latlon')
     gxnext_nodeattrib = nx.get_node_attributes(undgx_next,'latlon')
     printcov("Node attributes for overlap calc are:\n")
-    print("curr anchor node: " + str(gxcurr_nodeattrib))
+    print("curr anchor graph: " + str(gxcurr_nodeattrib))
+    print("comparison  graph: " + str(gxnext_nodeattrib))
     print("\n")
-    print("comparison  node: " + str(gxnext_nodeattrib))
 
-    return
+    b = pd.DataFrame(columns = col_breach)
+    kl = 0
+
+    for x in range(0, len(gxcurr_nodeattrib)):
+        for y in range(0, len(gxnext_nodeattrib)):
+            #here, we compare curr(latlon) with next(latlon) iteratively.
+            print(str(gxcurr_nodeattrib[x]) + " ----- " + str(gxnext_nodeattrib[y]))
+            distance = gxcurr_nodeattrib[x].distance(gxnext_nodeattrib[y])
+            print("Person: " + anchorgraph_name +  " & Person " + compargraph_name)
+            print("     - anchor node: " + str(x) + "  and comparison node: " + str(y))
+            print("     - distance between above two: " + str(distance))
+            if(distance <= microcell_radius):
+                print("Microcell radius breached.")
+                data = pd.DataFrame([[anchorgraph_name,gxcurr_nodeattrib[x],
+                   compargraph_name,  gxnext_nodeattrib[y],distance]],
+                    columns=['name1','latlon1','name2','latlon2','dist'])
+                #breaches.append(str(gxcurr_nodeattrib[x]) + ":" + str(gxnext_nodeattrib[y]))
+                b = b.append(data)
+                kl = kl + 1
+                print("kl: " + str(kl))
+
+    return b
 
 #allows to validate all graphs. For each graph, walks it, explodes nodes and edges.
 def test_all_graphs(g):
@@ -229,6 +253,9 @@ for person in range(0,len(persons)):
 #gxarry_pop_travel_hist was filled in graph_per_person
 test_all_graphs(gxarry_pop_travel_hist)
 
-overlaps_for_pop(gxarry_pop_travel_hist)
+breaches = overlaps_for_pop(gxarry_pop_travel_hist)
+
+printcov("There are : " + str(len(breaches)) + " breaches that require attention. They are: ")
+print(breaches)
 
 printcov("Completed Covid 19 contact tracing analysis.")
