@@ -17,6 +17,7 @@ from LatLon import *
 import networkx as nx
 import matplotlib.pyplot as plt
 import time
+from copy import deepcopy
 
 ##### All configurations start here #####
 
@@ -154,7 +155,13 @@ def overlaps_for_pop(gxall):
             #we've reached the last person (graph) in the array.
         else: """
         #compare current person graph with all others for loc overlaps
-        gxallminuscurr = gxall
+        #first copy out the graph container
+        gxallminuscurr = []
+        for cv in range(0,len(gxall)):
+            newgx = deepcopy(gxall[cv])
+            gxallminuscurr.append(newgx)
+
+        #gxallminuscurr = copy.deep_copy(gxall)
         gxallminuscurr.pop(x)#remove current persons graph before cmp
         for y in range(0, len(gxallminuscurr)):
             undirectedgxnext = gxallminuscurr[y].to_undirected()
@@ -166,11 +173,13 @@ def overlaps_for_pop(gxall):
 #finds overlapping locations between two graphs
 def find_overlap(undgx_curr, undgx_next):
     #get 'latlon' attributes of all nodes
+    printcov("Processing overlaps. Anchor graph: " + str(undgx_curr.graph['name']) + " and Comparison graph: " + str(undgx_next.graph['name']))
     gxcurr_nodeattrib = nx.get_node_attributes(undgx_curr,'latlon')
     gxnext_nodeattrib = nx.get_node_attributes(undgx_next,'latlon')
-    printcov("Node attributes for overlap calc are:")
-    print("curr anchor node: " + gxcurr_nodeattrib)
-    print("comparison  node: " + gxnext_nodeattrib)
+    printcov("Node attributes for overlap calc are:\n")
+    print("curr anchor node: " + str(gxcurr_nodeattrib))
+    print("\n")
+    print("comparison  node: " + str(gxnext_nodeattrib))
 
     return
 
@@ -204,10 +213,10 @@ def disp_graph(g):
 printcov("Starting Covid 19 contact tracing analysis for data in: ")
 printcov(" " + datapath)
 printcov("Configurations are: ")
-print("Microcell radius for overlap calc: " + microcell_radius)
-print("Graph display control is: " + ui + " 0 = ON / 1 = OFF.")
+print("Microcell radius for overlap calc: " + str(microcell_radius))
+print("Graph display control is: " + str(ui) + ".   0 = ON / 1 = OFF.")
 print('-------------------------------------')
-time.sleep(5)
+time.sleep(7.7)
 
 #call dataprep method
 sorteddf = dataprep()
