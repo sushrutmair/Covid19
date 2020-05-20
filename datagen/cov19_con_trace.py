@@ -25,12 +25,12 @@ from copy import deepcopy
 pd.set_option('display.precision',12)
 
 #data file path. this is the data to be analyzed.
-datapath = 'cov19_gen_dataset_10.csv'#'cov19_gen_dataset_10k.csv'
+datapath = 'cov19_gen_dataset_05.csv'#'cov19_gen_dataset_10k.csv'
 
 #stores the size of the virtual microcell around each location a person was recorded to have visited.
 #this is used to calculate if two persons have breached the commonly accepted social distance limits.
 #can be changed to anything, default is kept at x metres.
-microcell_radius = 0.003 # default is 0.003. It is about 10 ft in metres
+microcell_radius = 0.005 # default is 0.003. It is about 10 ft captured here in metres
 
 #controls whether graphs are visually displayed or not. If running on linux ensure X Windows is available.
 #0 = graphs are displayed in ui. 1 = no graphs are displayed.
@@ -45,7 +45,11 @@ persons = []
 all_locs_unnormalized = [] #holds all recorded locations in an array
 gxarry_pop_travel_hist = [] #array of nx graphs holding travel history of each member in pop
 undir_gxarray_pop_travel_hist = []#same graph as gxarry_pop_travel_hist except it is undirected
-col_breach = ['name1','latlon1','name2','latlon2','dist']
+col_breach = ['name1','con1','latlon1','entrytm1','exittm1','name2','con2','latlon2',
+    'entrytm2','exittm2','dist','breach', 'risk']
+
+#holds info of all possible breaches of microcell_radius by the population and which two
+#people were responsible for it
 breaches = pd.DataFrame(columns = col_breach)
 
 ##### Methods #####
@@ -108,7 +112,7 @@ def graph_per_person(person):
     one_persons_records = sorteddf.loc[sorteddf['name'] == person] #sorted by time in asc order
     one_persons_records = one_persons_records.reset_index(drop=True)
     print(one_persons_records)
-    gx = nx.MultiDiGraph(name=person) #new graph for curr person
+    gx = nx.MultiDiGraph(name=person,con=one_persons_records['condition'][0]) #new graph for curr person
 
     #create all nodes
     nodeid=0
@@ -176,7 +180,11 @@ def find_overlap(undgx_curr, undgx_next):
     #get 'latlon' attributes of both and figure out if present in microcell
     anchorgraph_name = str(undgx_curr.graph['name'])
     compargraph_name = str(undgx_next.graph['name'])
-    printcov("Processing overlaps. Anchor graph: " + anchorgraph_name + " and Comparison graph: " + compargraph_name)
+    anchor_health_status = str(undgx_curr.graph['con'])
+    compar_health_status = str(undgx_next.graph['con'])
+    printcov("Processing overlaps. Anchor graph: " + anchorgraph_name + " | " + 
+        anchor_health_status + " and Comparison graph: " 
+        + compargraph_name + " | " + compar_health_status)
     gxcurr_nodeattrib = nx.get_node_attributes(undgx_curr,'latlon')
     gxnext_nodeattrib = nx.get_node_attributes(undgx_next,'latlon')
     printcov("Node attributes for overlap calc are:\n")
@@ -185,7 +193,6 @@ def find_overlap(undgx_curr, undgx_next):
     print("\n")
 
     b = pd.DataFrame(columns = col_breach)
-    kl = 0
 
     for x in range(0, len(gxcurr_nodeattrib)):
         for y in range(0, len(gxnext_nodeattrib)):
@@ -195,17 +202,68 @@ def find_overlap(undgx_curr, undgx_next):
             print("Person: " + anchorgraph_name +  " & Person " + compargraph_name)
             print("     - anchor node: " + str(x) + "  and comparison node: " + str(y))
             print("     - distance between above two: " + str(distance))
+
+            entm1 = find_startime_gx(x, undgx_curr)
+            extm1 = find_endtime_gx(x, undgx_curr)
+
+            entm2 = find_startime_gx(y, undgx_next)
+            extm2 = find_endtime_gx(y, undgx_next)
+            
+            risk = 'none'
+            breach = 'no'
             if(distance <= microcell_radius):
                 print("Microcell radius breached.")
-                data = pd.DataFrame([[anchorgraph_name,gxcurr_nodeattrib[x],
-                   compargraph_name,  gxnext_nodeattrib[y],distance]],
-                    columns=['name1','latlon1','name2','latlon2','dist'])
-                #breaches.append(str(gxcurr_nodeattrib[x]) + ":" + str(gxnext_nodeattrib[y]))
+                breach = 'yes'
+                data = pd.DataFrame([[anchorgraph_name, anchor_health_status, gxcurr_nodeattrib[x], entm1, extm1, 
+                    compargraph_name, compar_health_status, gxnext_nodeattrib[y], entm2, extm2, 
+                    distance, breach, risk]],
+                    columns=['name1','con1','latlon1','entrytm1','exittm1','name2','con2',
+                        'latlon2','entrytm2','exittm2','dist','breach', 'risk'])
                 b = b.append(data)
-                kl = kl + 1
-                print("kl: " + str(kl))
 
     return b
+
+def find_endtime_gx(nodeid, gx):
+    curr_node = nodeid
+    prev_node = 0
+    next_node = 0
+    if(nodeid == 0):
+        prev_node = 0
+    else:
+        prev_node = nodeid-1
+
+    if(nodeid ==len(gx)-1):
+        next_node = nodeid
+    else:
+        next_node = nodeid + 1
+
+    extm1 = 0
+    if(gx.has_edge(curr_node,next_node)):
+        extm1 = gx.get_edge_data(curr_node,next_node)
+        extm1 = extm1[0]['time']
+    
+    return extm1
+
+def find_startime_gx(nodeid, gx):
+    curr_node = nodeid
+    prev_node = 0
+    next_node = 0
+    if(nodeid == 0):
+        prev_node = 0
+    else:
+        prev_node = nodeid-1
+
+    if(nodeid ==len(gx)-1):
+        next_node = nodeid
+    else:
+        next_node = nodeid + 1
+
+    entm1 = 0
+    if(gx.has_edge(prev_node,curr_node)):
+        entm1 = gx.get_edge_data(prev_node,curr_node)
+        entm1 = entm1[0]['time']
+    
+    return entm1
 
 #allows to validate all graphs. For each graph, walks it, explodes nodes and edges.
 def test_all_graphs(g):

@@ -43,7 +43,7 @@ total_readings = 24
 
 #total no of people for whom readings are to be generated. These is the sum total of all
 #people who were recorded as being under the geo location of interest.
-total_pop = 10
+total_pop = 5
 
 #% of total pop that is sick. Vary this to test how infection risk changes with more/less
 #people seen co located in a geo area.
