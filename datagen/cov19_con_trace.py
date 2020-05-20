@@ -25,12 +25,12 @@ from copy import deepcopy
 pd.set_option('display.precision',12)
 
 #data file path. this is the data to be analyzed.
-datapath = 'cov19_gen_dataset_05.csv'#'cov19_gen_dataset_10k.csv'
+datapath = 'cov19_gen_dataset_1k.csv' #'cov19_gen_dataset_10k.csv'
 
 #stores the size of the virtual microcell around each location a person was recorded to have visited.
 #this is used to calculate if two persons have breached the commonly accepted social distance limits.
-#can be changed to anything, default is kept at x metres.
-microcell_radius = 0.005 # default is 0.003. It is about 10 ft captured here in metres
+#can be changed to anything, default is kept at x metres. This is for tagging high risk contacts.
+microcell_radius = 0.003 # default is 0.003. It is about 10 ft captured here in metres
 
 #controls whether graphs are visually displayed or not. If running on linux ensure X Windows is available.
 #0 = graphs are displayed in ui. 1 = no graphs are displayed.
@@ -48,9 +48,9 @@ undir_gxarray_pop_travel_hist = []#same graph as gxarry_pop_travel_hist except i
 col_breach = ['name1','con1','latlon1','entrytm1','exittm1','name2','con2','latlon2',
     'entrytm2','exittm2','dist','breach', 'risk']
 
-#holds info of all possible breaches of microcell_radius by the population and which two
-#people were responsible for it
-breaches = pd.DataFrame(columns = col_breach)
+#holds info of all possible travels by the population and which two people were involved. This
+#is used to generate a risk profile for the population.
+travel_hist = pd.DataFrame(columns = col_breach)
 
 ##### Methods #####
 
@@ -214,12 +214,27 @@ def find_overlap(undgx_curr, undgx_next):
             if(distance <= microcell_radius):
                 print("Microcell radius breached.")
                 breach = 'yes'
-                data = pd.DataFrame([[anchorgraph_name, anchor_health_status, gxcurr_nodeattrib[x], entm1, extm1, 
+
+                #@todo: high only if time overlap+(s,h) contact. also need to mark new edges
+                # connecting locs. mark possible infection start loc (and time) for the h contact
+                # since all h contacts to that h after that loc are suspect (med). For low risk 
+                # profiles all h contacts with (s && suspect h - post infect loc and time) but in
+                #a larger microcell r.
+                risk = 'high'
+                
+                """ data = pd.DataFrame([[anchorgraph_name, anchor_health_status, gxcurr_nodeattrib[x], entm1, extm1, 
                     compargraph_name, compar_health_status, gxnext_nodeattrib[y], entm2, extm2, 
                     distance, breach, risk]],
                     columns=['name1','con1','latlon1','entrytm1','exittm1','name2','con2',
                         'latlon2','entrytm2','exittm2','dist','breach', 'risk'])
-                b = b.append(data)
+                b = b.append(data) """
+            
+            data = pd.DataFrame([[anchorgraph_name, anchor_health_status, gxcurr_nodeattrib[x], entm1, extm1, 
+                    compargraph_name, compar_health_status, gxnext_nodeattrib[y], entm2, extm2, 
+                    distance, breach, risk]],
+                    columns=['name1','con1','latlon1','entrytm1','exittm1','name2','con2',
+                        'latlon2','entrytm2','exittm2','dist','breach', 'risk'])
+            b = b.append(data)
 
     return b
 
@@ -311,9 +326,11 @@ for person in range(0,len(persons)):
 #gxarry_pop_travel_hist was filled in graph_per_person
 test_all_graphs(gxarry_pop_travel_hist)
 
-breaches = overlaps_for_pop(gxarry_pop_travel_hist)
+travel_hist = overlaps_for_pop(gxarry_pop_travel_hist)
+printcov("There are : " + str(len(travel_hist)) + " travel histories. They are: ")
+print(travel_hist)
+#save travel hist for later use
+travel_hist.to_csv("travelhist_df.csv")
 
-printcov("There are : " + str(len(breaches)) + " breaches that require attention. They are: ")
-print(breaches)
 
 printcov("Completed Covid 19 contact tracing analysis.")
