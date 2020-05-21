@@ -25,7 +25,7 @@ from copy import deepcopy
 pd.set_option('display.precision',12)
 
 #data file path. this is the data to be analyzed.
-datapath = 'cov19_gen_dataset_1k.csv' #'cov19_gen_dataset_10k.csv'
+datapath = 'cov19_gen_dataset_10.csv' #'cov19_gen_dataset_10k.csv'
 
 #stores the size of the virtual microcell around each location a person was recorded to have visited.
 #this is used to calculate if two persons have breached the commonly accepted social distance limits.
@@ -215,12 +215,26 @@ def find_overlap(undgx_curr, undgx_next):
                 print("Microcell radius breached.")
                 breach = 'yes'
 
-                #@todo: high only if time overlap+(s,h) contact. also need to mark new edges
-                # connecting locs. mark possible infection start loc (and time) for the h contact
-                # since all h contacts to that h after that loc are suspect (med). For low risk 
-                # profiles all h contacts with (s && suspect h - post infect loc and time) but in
-                #a larger microcell r.
+                #@todo1 - a new edge connecting these two nodes and save the graph. Also mark
+                #the relevant loc's as 'overlapped' with a new node attribute. risk is still
+                #classified as none because we have not yet calculated time overlap
+
+                #@todo2 - time overlaps. use e*tm1 and e*tm2 to calculate overlap. If there is
+                #an overlap of time then we have two people in the same location at the same
+                #time => risk == high if one of them is sick. For the h person mark the loc as
+                #infection start time (potentially). We already have the time at that place tho
+                #the actual start time should be the time h and s were together first at this loc.
                 risk = 'high'
+
+                #@todo3 - since all h contacts to this newly infected h after that loc are suspect.
+                #this represents a med risk (s-->h1-->h2). We need to find all common_locs(h1,h2)
+                #and then time overlap. If common_loc && time_overlap then h2 is suspect at med risk.
+                #risk = 'med'
+
+                #@todo4 - For low risk profiles all h contacts with (s && suspect h - post infect loc and 
+                #time) but in a larger microcell r. No time overlap to be calculated. These are a subset
+                #of the remaining people (since not all may fit into the larger microcell r)
+                #risk = 'low'
                 
                 """ data = pd.DataFrame([[anchorgraph_name, anchor_health_status, gxcurr_nodeattrib[x], entm1, extm1, 
                     compargraph_name, compar_health_status, gxnext_nodeattrib[y], entm2, extm2, 
