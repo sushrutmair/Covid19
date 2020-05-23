@@ -30,7 +30,7 @@ datapath = 'cov19_gen_dataset_05.csv' #'cov19_gen_dataset_10k.csv'
 #stores the size of the virtual microcell around each location a person was recorded to have visited.
 #this is used to calculate if two persons have breached the commonly accepted social distance limits.
 #can be changed to anything, default is kept at x metres. This is for tagging high risk contacts.
-microcell_radius = 0.005 # default is 0.003. It is about 10 ft captured here in metres
+microcell_radius = 0.01 # default is 0.003. It is about 10 ft captured here in metres
 
 #controls whether graphs are visually displayed or not. If running on linux ensure X Windows is available.
 #0 = graphs are displayed in ui. 1 = no graphs are displayed.
@@ -51,6 +51,8 @@ col_breach = ['name1','con1','latlon1','entrytm1','exittm1','name2','con2','latl
 #holds info of all possible travels by the population and which two people were involved. This
 #is used to generate a risk profile for the population.
 travel_hist = pd.DataFrame(columns = col_breach)
+
+biggx = nx.Graph()
 
 ##### Methods #####
 
@@ -124,12 +126,6 @@ def graph_per_person(person):
     
     noofnodes = nx.number_of_nodes(gx)
 
-    ###
-    for n,d in list(gx.nodes(data=True)):
-        print(n)
-        print(d)
-    ###
-
     #now let's add edges for the nodes
     print("Adding edges for: " + str(nx.number_of_nodes(gx)) + " nodes...")
     print(gx.nodes())
@@ -176,7 +172,6 @@ def overlaps_for_pop(gxall):
             newgx = deepcopy(gxall[cv]) #use a deep copy
             gxallminuscurr.append(newgx)
 
-        #gxallminuscurr = copy.deep_copy(gxall)
         gxallminuscurr.pop(x)#remove current persons graph before cmp
         for y in range(0, len(gxallminuscurr)):
             undirectedgxnext = gxallminuscurr[y].to_undirected()
@@ -227,18 +222,30 @@ def find_overlap(undgx_curr, undgx_next):
             breach = 'no'
             if(distance <= microcell_radius):
                 
-                #@todo1 - a new edge connecting these two nodes and save the graph. Also mark
+                #a new edge connecting these two nodes and save the graph. Also mark
                 #the relevant loc's as 'breached' with a new node attribute. risk is still
                 #classified as none because we have not yet calculated time overlap
                 print("Microcell radius breached.")
                 breach = 'yes'
+                biggx.add_edge(gxcurr_curr_nodelbl,gxnext_curr_nodelbl)
+                biggx.nodes[gxcurr_curr_nodelbl]['breached'] = 'yes'
+                biggx.nodes[gxnext_curr_nodelbl]['breached'] = 'yes'
 
-                #@todo2 - time overlaps. use e*tm1 and e*tm2 to calculate overlap. If there is
+                #time overlaps. use e*tm1 and e*tm2 to calculate overlap. If there is
                 #an overlap of time then we have two people in the same location at the same
                 #time => risk == high if one of them is sick. For the h person mark the loc as
                 #infection start time (potentially). We already have the time at that place tho
                 #the actual start time should be the time h and s were together first at this loc.
-                risk = 'high'
+                #risk = 'high'
+                if(max(entm1,entm2) <= min(extm1,extm2)):
+                    print("Time overlap found too. Checking if one of them is sick..")
+                    if( (anchor_health_status=='sick') or (compar_health_status=='sick')):
+                        print("One person is sick. Marked as high risk for healthy.")
+                        risk = 'high'
+                        if(anchor_health_status=='healthy'):
+                          biggx.nodes[gxcurr_curr_nodelbl]['infec_start_loc'] = 'yes'
+                        if(compar_health_status=='healthy'):
+                          biggx.nodes[gxnext_curr_nodelbl]['infec_start_loc'] = 'yes'
 
                 #@todo3 -  all h contacts to this newly infected h after that loc are suspect.
                 #this represents a med risk (s-->h1-->h2). We need to find all common_locs(h1,h2)
@@ -335,6 +342,16 @@ def test_all_graphs(g):
     printcov("=========> Testing complete.")
     return
 
+#builds a mother graph for all of the population. Is an undirected
+#graph and is used for running analysis algorithms.
+def build_bigdaddy(gxarray):
+
+    gxdaddytemp = nx.MultiGraph()
+    for i in range(0,len(gxarray)):
+        gxdaddytemp = nx.compose(gxdaddytemp,gxarray[i].to_undirected())
+
+    return gxdaddytemp
+
 #display graphs
 def disp_graph(g):
     if(ui == 0):
@@ -363,11 +380,17 @@ for person in range(0,len(persons)):
 
 test_all_graphs(gxarry_pop_travel_hist)
 
+biggx = build_bigdaddy(gxarry_pop_travel_hist)
+
 travel_hist = overlaps_for_pop(gxarry_pop_travel_hist)
 printcov("There are : " + str(len(travel_hist)) + " travel histories. They are: ")
 print(travel_hist)
 #save travel hist for later use
 travel_hist.to_csv("travelhist_df.csv")
+disp_graph(biggx)
 
+plt.figure(figsize=(43,47))
+nx.draw(biggx, with_labels=True)
+plt.show()
 
 printcov("Completed Covid 19 contact tracing analysis.")
