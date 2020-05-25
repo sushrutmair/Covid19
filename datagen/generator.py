@@ -20,8 +20,9 @@ c) find hotspots, locations where a large number of sick and healthy people inte
 
 Dependencies:
  - Python 2.7 only (latlon doesn't support Python 3 :(.)
- - latlon library - https://pypi.org/project/LatLon/
- - pandas
+ - LatLon 1.0.2 - https://pypi.org/project/LatLon/
+ - pandas 0.24.2
+ 
 """
 
 import random
