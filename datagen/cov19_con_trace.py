@@ -7,7 +7,20 @@ whether this person is sick or healthy.
 
 Use generator.py to generate data in the above form with various configurations.
 
-This program assumes that the input data is in the format prescribed above.
+This program assumes that the input data is in the format prescribed above. It takes this data
+and then generated various directed as well as undirected graphs. It use the graphs to:
+ - detect potential high risk contacts
+ - detect risky locations
+ - detect vulnerable subset of the population
+ - predict potential future vulnerable population / locations
+
+Dependencies:
+- Python 2.7 only (latlon doesn't support Python 3 :(. For python 3+, use pyGeodesy)
+- LatLon 1.0.2 - https://pypi.org/project/LatLon/
+- pandas 0.24.2
+- networkx 2.2 ( !pip install networkx=2.2. 2.2 due to python 2.7 - use latest if on Python 3+ )
+- python-louvain 0.13 ( !pip install python-louvain )
+- matplotlib 2.2.4
 
 '''
 
@@ -18,6 +31,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import time
 from copy import deepcopy
+import community
 
 ##### All configurations start here #####
 
@@ -52,7 +66,12 @@ col_breach = ['name1','con1','latlon1','entrytm1','exittm1','name2','con2','latl
 #is used to generate a risk profile for the population.
 travel_hist = pd.DataFrame(columns = col_breach)
 
+#graph with various new edges and attributes on both nodes and edges. Used for
+#overall analysis activities.
 biggx = nx.Graph()
+
+#list of known infected people
+infected_list = []
 
 ##### Methods #####
 
@@ -227,7 +246,9 @@ def find_overlap(undgx_curr, undgx_next):
                 #classified as none because we have not yet calculated time overlap
                 print("Microcell radius breached.")
                 breach = 'yes'
-                biggx.add_edge(gxcurr_curr_nodelbl,gxnext_curr_nodelbl)
+                #breachnodes attribute is useful to find edges that caused a breach
+                biggx.add_edge(gxcurr_curr_nodelbl,gxnext_curr_nodelbl,
+                    breachnodes=(gxcurr_curr_nodelbl+':'+gxnext_curr_nodelbl))
                 biggx.nodes[gxcurr_curr_nodelbl]['breached'] = 'yes'
                 biggx.nodes[gxnext_curr_nodelbl]['breached'] = 'yes'
 
@@ -244,25 +265,10 @@ def find_overlap(undgx_curr, undgx_next):
                         risk = 'high'
                         if(anchor_health_status=='healthy'):
                           biggx.nodes[gxcurr_curr_nodelbl]['infec_start_loc'] = 'yes'
+                          infected_list.append(gxnext_curr_nodelbl)
                         if(compar_health_status=='healthy'):
                           biggx.nodes[gxnext_curr_nodelbl]['infec_start_loc'] = 'yes'
-
-                #@todo3 -  all h contacts to this newly infected h after that loc are suspect.
-                #this represents a med risk (s-->h1-->h2). We need to find all common_locs(h1,h2)
-                #and then time overlap. If common_loc && time_overlap then h2 is suspect at med risk.
-                #risk = 'med'
-
-                #@todo4 - For low risk profiles all h contacts with (s && suspect h - post infect loc and 
-                #time) but in a larger microcell r. No time overlap to be calculated. These are a subset
-                #of the remaining people (since not all may fit into the larger microcell r)
-                #risk = 'low'
-                
-                """ data = pd.DataFrame([[anchorgraph_name, anchor_health_status, gxcurr_nodeattrib[x], entm1, extm1, 
-                    compargraph_name, compar_health_status, gxnext_nodeattrib[y], entm2, extm2, 
-                    distance, breach, risk]],
-                    columns=['name1','con1','latlon1','entrytm1','exittm1','name2','con2',
-                        'latlon2','entrytm2','exittm2','dist','breach', 'risk'])
-                b = b.append(data) """
+                          infected_list.append(gxcurr_curr_nodelbl)
             
             data = pd.DataFrame([[anchorgraph_name, anchor_health_status, 
                     gxcurr_nodeattrib[gxcurr_curr_nodelbl], entm1, extm1, 
@@ -359,6 +365,137 @@ def disp_graph(g):
         nx.draw_networkx_edge_labels(g, pos=nx.spring_layout(g))
         plt.show()
 
+def save_graph_to_pickle(g, filename):
+    nx.write_gpickle(g, filename)
+    return
+
+def read_graph_from_pickle(picklepath):
+    g = nx.read_gpickle(picklepath)
+    return g
+
+def find_infection_start_locs(g):
+    nattrib_infec_start_loc = nx.get_node_attributes(g,'infec_start_loc')
+    print("Infection start locations for healthy people are: \n" + str(nattrib_infec_start_loc))
+    return nattrib_infec_start_loc
+
+def find_high_traffic_locations(g):
+    node_deg = dict(nx.degree(g))
+    sorted_nodedeg = [(k, node_deg[k]) for k in sorted(node_deg, key=node_deg.get, reverse=True)]
+    top5nodes_by_deg = []
+    top5nodes_by_deg.append(sorted_nodedeg[0])
+    top5nodes_by_deg.append(sorted_nodedeg[1])
+    top5nodes_by_deg.append(sorted_nodedeg[2])
+    top5nodes_by_deg.append(sorted_nodedeg[3])
+    top5nodes_by_deg.append(sorted_nodedeg[4])
+
+    di = nx.get_node_attributes(g,'breached')
+
+    htl = []
+    for n in g.nodes:
+        for n2 in top5nodes_by_deg:
+            if(n == n2[0]):
+                for n3 in di:
+                    if(n2[0] == n3):
+                        print("High traffic loc: " + str(n3))
+                        htl.append(n3)
+    return htl
+
+def predict_next_infec_locations(g):
+    neighb_nodes=[]
+
+    infec_start_locs = nx.get_node_attributes(g,'infec_start_loc')
+    for n in infec_start_locs:
+        neighb = nx.all_neighbors(g,n)
+        for nebs in neighb:
+            neighb_nodes.append(nebs)
+
+    #we can also order these location edges by time by keeping locs that come into play
+    #only after the 'infec_start_loc' time. This keeps predicted locs that were traveled
+    #to only after an infection occured. The below is a more generic set.
+    print("Potential locations where infections could have occurred (time agnostic): ")
+    print(neighb_nodes)
+
+    return neighb_nodes
+
+#note: this function plots a graph if ui is enabled
+def find_communities_based_on_loc(g):
+
+    #first compute the best partition
+    G = g
+    partition = community.best_partition(G)
+
+    comm_list = []
+
+    #drawing
+    
+    size = float(len(set(partition.values())))
+    count = 0.
+    for com in set(partition.values()) :
+        count = count + 1.
+        list_nodes = [nodes for nodes in partition.keys()
+                                    if partition[nodes] == com]
+        comm_list.append(list_nodes)
+
+    if(ui == 0):
+        plt.figure(101,(17,17))
+        pos = nx.spring_layout(G)
+        nclr = range(len(list_nodes))
+        nx.draw_networkx_nodes(G, pos, list_nodes, node_size = 150, node_color = nclr)
+        #print("node color: ",nclr, ". For community: ", list_nodes, "\n")
+        nx.draw_networkx_edges(G, pos, alpha=0.5)
+        plt.show()
+
+    print("Final list of ", len(comm_list), " louvain modularized communities :=>\n")
+    for x in comm_list:
+        print(x)
+    
+    return comm_list
+
+def find_vuln_loc_and_ppl(comm_list, infperson):
+
+    vulncomm = [] #list of vulnerable locations
+    for comm in comm_list:
+        for p in comm:
+            onlyname = ''.join([i for i in p if not i.isdigit()])
+            if(onlyname == infperson):
+                vulncomm.append(comm)
+                break
+    print("Vulnerable locations are: ")
+    print(vulncomm)
+    
+    vulnppl1 = []
+    for x in vulncomm:
+        for j in range(0,len(x)):
+            onlyname = ''.join([i for i in x[j] if not i.isdigit()])
+            vulnppl1.append(onlyname)
+
+    print("Vulnerable people are: ")
+    vulnppl = list(set(vulnppl1))
+    print(vulnppl)
+
+    return vulncomm, vulnppl
+
+def find_known_infected_ppl(g):
+    return infected_list
+
+def run_graph_analysis(g):
+    
+    infperson_lst = find_known_infected_ppl(g)
+    
+    find_infection_start_locs(g)
+    
+    find_high_traffic_locations(g)
+    
+    predict_next_infec_locations(g)
+    
+    comm_list = find_communities_based_on_loc(g)
+
+    for infp in infperson_lst:
+        onlyname = ''.join([i for i in infp if not i.isdigit()])
+        find_vuln_loc_and_ppl(comm_list, onlyname)
+
+    return
+
 ################
 ##### MAIN #####
 ################
@@ -392,5 +529,9 @@ disp_graph(biggx)
 plt.figure(figsize=(43,47))
 nx.draw(biggx, with_labels=True)
 plt.show()
+
+save_graph_to_pickle("graph.gz")
+
+run_graph_analysis(biggx)
 
 printcov("Completed Covid 19 contact tracing analysis.")
