@@ -39,7 +39,7 @@ import community
 pd.set_option('display.precision',12)
 
 #data file path. this is the data to be analyzed.
-datapath = 'cov19_gen_dataset_05 _doctored.csv' #'cov19_gen_dataset_10k.csv'
+datapath = 'cov19_gen_dataset_05_doctored.csv' #'cov19_gen_dataset_10k.csv'
 
 #stores the size of the virtual microcell around each location a person was recorded to have visited.
 #this is used to calculate if two persons have breached the commonly accepted social distance limits.
