@@ -8,7 +8,7 @@ whether this person is sick or healthy.
 Use generator.py to generate data in the above form with various configurations.
 
 This program assumes that the input data is in the format prescribed above. It takes this data
-and then generated various directed as well as undirected graphs. It use the graphs to:
+and then builds various directed as well as undirected graphs. It use the graphs to:
  - detect potential high risk contacts
  - detect risky locations
  - detect vulnerable subset of the population
@@ -39,7 +39,7 @@ import community
 pd.set_option('display.precision',12)
 
 #data file path. this is the data to be analyzed.
-datapath = 'cov19_gen_dataset_05.csv' #'cov19_gen_dataset_10k.csv'
+datapath = 'cov19_gen_dataset_05 _doctored.csv' #'cov19_gen_dataset_10k.csv'
 
 #stores the size of the virtual microcell around each location a person was recorded to have visited.
 #this is used to calculate if two persons have breached the commonly accepted social distance limits.
@@ -265,10 +265,8 @@ def find_overlap(undgx_curr, undgx_next):
                         risk = 'high'
                         if(anchor_health_status=='healthy'):
                           biggx.nodes[gxcurr_curr_nodelbl]['infec_start_loc'] = 'yes'
-                          infected_list.append(gxnext_curr_nodelbl)
                         if(compar_health_status=='healthy'):
                           biggx.nodes[gxnext_curr_nodelbl]['infec_start_loc'] = 'yes'
-                          infected_list.append(gxcurr_curr_nodelbl)
             
             data = pd.DataFrame([[anchorgraph_name, anchor_health_status, 
                     gxcurr_nodeattrib[gxcurr_curr_nodelbl], entm1, extm1, 
@@ -348,7 +346,7 @@ def test_all_graphs(g):
     printcov("=========> Testing complete.")
     return
 
-#builds a mother graph for all of the population. Is an undirected
+#builds a graph for all of the population. Is an undirected
 #graph and is used for running analysis algorithms.
 def build_bigdaddy(gxarray):
 
@@ -375,7 +373,7 @@ def read_graph_from_pickle(picklepath):
 
 def find_infection_start_locs(g):
     nattrib_infec_start_loc = nx.get_node_attributes(g,'infec_start_loc')
-    print("Infection start locations for healthy people are: \n" + str(nattrib_infec_start_loc))
+    printcov("Infection start locations for healthy people are: \n" + str(nattrib_infec_start_loc))
     return nattrib_infec_start_loc
 
 def find_high_traffic_locations(g):
@@ -390,13 +388,14 @@ def find_high_traffic_locations(g):
 
     di = nx.get_node_attributes(g,'breached')
 
+    printcov("These locations have witnessed high traffic: ")
     htl = []
     for n in g.nodes:
         for n2 in top5nodes_by_deg:
             if(n == n2[0]):
                 for n3 in di:
                     if(n2[0] == n3):
-                        print("High traffic loc: " + str(n3))
+                        print(str(n3))
                         htl.append(n3)
     return htl
 
@@ -412,7 +411,7 @@ def predict_next_infec_locations(g):
     #we can also order these location edges by time by keeping locs that come into play
     #only after the 'infec_start_loc' time. This keeps predicted locs that were traveled
     #to only after an infection occured. The below is a more generic set.
-    print("Potential locations where infections could have occurred (time agnostic): ")
+    printcov("Predicted locations where infections may have occurred (time agnostic): ")
     print(neighb_nodes)
 
     return neighb_nodes
@@ -424,10 +423,7 @@ def find_communities_based_on_loc(g):
     G = g
     partition = community.best_partition(G)
 
-    comm_list = []
-
-    #drawing
-    
+    comm_list = []    
     size = float(len(set(partition.values())))
     count = 0.
     for com in set(partition.values()) :
@@ -445,7 +441,7 @@ def find_communities_based_on_loc(g):
         nx.draw_networkx_edges(G, pos, alpha=0.5)
         plt.show()
 
-    print("Final list of ", len(comm_list), " louvain modularized communities :=>\n")
+    printcov("Final list of ", len(comm_list), " louvain modularized communities :=>\n")
     for x in comm_list:
         print(x)
     
@@ -460,7 +456,7 @@ def find_vuln_loc_and_ppl(comm_list, infperson):
             if(onlyname == infperson):
                 vulncomm.append(comm)
                 break
-    print("Vulnerable locations are: ")
+    printcov("Priority list of vulnerable locations are: ")
     print(vulncomm)
     
     vulnppl1 = []
@@ -469,7 +465,7 @@ def find_vuln_loc_and_ppl(comm_list, infperson):
             onlyname = ''.join([i for i in x[j] if not i.isdigit()])
             vulnppl1.append(onlyname)
 
-    print("Vulnerable people are: ")
+    printcov("Vulnerable people are: ")
     vulnppl = list(set(vulnppl1))
     print(vulnppl)
 
@@ -510,6 +506,10 @@ time.sleep(7.7)
 #call dataprep method. We also get 'persons' during this
 sorteddf = dataprep()
 
+infected_list = (sorteddf.loc[sorteddf['condition'] == 'sick'])['name'].unique()
+printcov("We have: " + str(len(infected_list)) + " known infected people in this dataset. They are: ")
+print(infected_list)
+
 #call graph generation method for each person in the dataset
 print("Initiating graph generation...")
 for person in range(0,len(persons)):
@@ -526,11 +526,7 @@ print(travel_hist)
 travel_hist.to_csv("travelhist_df.csv")
 disp_graph(biggx)
 
-plt.figure(figsize=(43,47))
-nx.draw(biggx, with_labels=True)
-plt.show()
-
-save_graph_to_pickle("graph.gz")
+save_graph_to_pickle(biggx, "graph.gz")
 
 run_graph_analysis(biggx)
 
