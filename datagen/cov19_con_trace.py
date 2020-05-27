@@ -44,7 +44,7 @@ datapath = 'cov19_gen_dataset_05_doctored.csv' #'cov19_gen_dataset_10k.csv'
 #stores the size of the virtual microcell around each location a person was recorded to have visited.
 #this is used to calculate if two persons have breached the commonly accepted social distance limits.
 #can be changed to anything, default is kept at x metres. This is for tagging high risk contacts.
-microcell_radius = 0.01 # default is 0.003. It is about 10 ft captured here in metres
+microcell_radius = 0.005 # e.g., say is set to 0.003. It is about 10 ft captured here in (3) metres
 
 #controls whether graphs are visually displayed or not. If running on linux ensure X Windows is available.
 #0 = graphs are displayed in ui. 1 = no graphs are displayed.
@@ -56,7 +56,6 @@ ui = 1
 rawdataframe = pd.DataFrame()
 sorteddf = pd.DataFrame() #same as raw data frame except all locations are sorted asc order by time of visit
 persons = []
-all_locs_unnormalized = [] #holds all recorded locations in an array
 gxarry_pop_travel_hist = [] #array of nx graphs holding travel history of each member in pop
 undir_gxarray_pop_travel_hist = []#same graph as gxarry_pop_travel_hist except it is undirected
 col_breach = ['name1','con1','latlon1','entrytm1','exittm1','name2','con2','latlon2',
@@ -71,7 +70,7 @@ travel_hist = pd.DataFrame(columns = col_breach)
 biggx = nx.Graph()
 
 #list of known infected people
-infected_list = []
+known_infected_list = []
 
 ##### Methods #####
 
@@ -441,7 +440,7 @@ def find_communities_based_on_loc(g):
         nx.draw_networkx_edges(G, pos, alpha=0.5)
         plt.show()
 
-    printcov("Final list of ", len(comm_list), " louvain modularized communities :=>\n")
+    printcov("Final list of: " + len(comm_list) + " louvain modularized communities :=>\n")
     for x in comm_list:
         print(x)
     
@@ -472,7 +471,9 @@ def find_vuln_loc_and_ppl(comm_list, infperson):
     return vulncomm, vulnppl
 
 def find_known_infected_ppl(g):
-    return infected_list
+    printcov("We have: " + str(len(known_infected_list)) + " known infected people in this dataset. They are: ")
+    print(known_infected_list)
+    return known_infected_list
 
 def run_graph_analysis(g):
     
@@ -506,9 +507,9 @@ time.sleep(7.7)
 #call dataprep method. We also get 'persons' during this
 sorteddf = dataprep()
 
-infected_list = (sorteddf.loc[sorteddf['condition'] == 'sick'])['name'].unique()
-printcov("We have: " + str(len(infected_list)) + " known infected people in this dataset. They are: ")
-print(infected_list)
+known_infected_list = (sorteddf.loc[sorteddf['condition'] == 'sick'])['name'].unique()
+printcov("We have: " + str(len(known_infected_list)) + " known infected people in this dataset. They are: ")
+print(known_infected_list)
 
 #call graph generation method for each person in the dataset
 print("Initiating graph generation...")
