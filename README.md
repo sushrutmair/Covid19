@@ -1,5 +1,5 @@
 # Covid19
-Programs to help understand and fight the pandemic.
+Programs to help understand and fight the pandemic. To understand the context, take a look at https://medium.com/@sushrut.j.mair/contact-tracing-for-covid-19-222c474b0919.
 
 generator.py - generates dataset that can be used for contact tracing and other analysis. provides detailed configurations to model various scenarios. Generated files are named 'cov19_gen_dataset*.csv'.
 
